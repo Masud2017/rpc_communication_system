@@ -1,0 +1,87 @@
+syntax="proto3";
+option java_multiple_files = true;
+option java_outer_classname = "EduCostOuterClass";
+option java_package="org.rpcproject.compiled_protobuf_classes";
+
+service EduCostService {
+  rpc queryCost(QueryRequest) returns (ResponseToQuery) {}
+  rpc queryExpensiveStateList(ExpensiveStateQuery) returns (ExpensiveStateResponse) {}
+  rpc queryEconomicStateList(EconomicStateQuery) returns (EconomicStateResponseList) {}
+  rpc queryHighestGrowthRateList(HighestGrowthRateQuery) returns (HighestGrowthRateResponseList) {}
+  rpc queryAggragateRegionsOverallExpense(AggragateRegionsOverallExpenseQuery) returns (AggragateRegionsOverallExpenseResponse){}
+}
+
+message AggragateRegionsOverallExpenseResponse {
+  string overall_expense=1;
+  string year = 2;
+}
+message AggragateRegionsOverallExpenseQuery {
+  string type=1;
+  string length=2;
+  string year=3;
+  string region=4;
+}
+
+message HighestGrowthRateResponseList {
+  repeated HighestGrowthRateResponse highestGrowthRateResponseList = 1;
+}
+
+message HighestGrowthRateResponse {
+  string state=1;
+  string expense=2;
+}
+
+message HighestGrowthRateQuery {
+  repeated string years=1;
+  string type=2;
+  string length=3;
+}
+
+message EconomicStateResponseList {
+  repeated EconomicStateResponse economicStatResponseList = 1;
+}
+
+message EconomicStateResponse {
+  string year=1;
+  string length=2;
+  string type=3;
+  string expense=4;
+}
+
+message EconomicStateQuery {
+  string year=1;
+  string length=2;
+  string type=3;
+}
+
+message ExpensiveStateResponse {
+  repeated string states=1;
+}
+
+message ExpensiveStateQuery {
+  string year=1;
+  string type=2;
+  string length=3;
+}
+
+message QueryRequest {
+  string year=1;
+  string state=2;
+  string type=3;
+  string length=4;
+  string expense=5;
+
+}
+
+message ResponseToQuery {
+  string cost=1;
+}
+
+message EduCost {
+  string Year = 1;
+  string Stat = 2;
+  string Type = 3;
+  string Length = 4;
+  string Expense = 5;
+  string Value = 6;
+}
