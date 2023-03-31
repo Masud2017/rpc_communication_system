@@ -2,6 +2,7 @@ package org.rpcproject.service;
 
 
 import io.grpc.stub.StreamObserver;
+import org.bson.Document;
 import org.rpcproject.compiled_protobuf_classes.EconomicStateQuery;
 import org.rpcproject.compiled_protobuf_classes.ExpensiveStateQuery;
 import org.rpcproject.compiled_protobuf_classes.QueryRequest;
@@ -9,7 +10,9 @@ import org.rpcproject.compiled_protobuf_classes.ResponseToQuery;
 import org.rpcproject.dao.RpcMongoDataRepository;
 import org.rpcproject.utils.Environment;
 
+import javax.print.Doc;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
 public class EduCostService extends org.rpcproject.compiled_protobuf_classes.EduCostServiceGrpc.EduCostServiceImplBase {
@@ -21,16 +24,25 @@ public class EduCostService extends org.rpcproject.compiled_protobuf_classes.Edu
 
     @Override
     public void queryCost(QueryRequest request, StreamObserver<ResponseToQuery> responseObserver) {
-        responseObserver.onNext(this.repository.getEduCost(request.getYear(),request.getState(),request.getType(), request.getLength()
-                , request.getExpense()));
+        ResponseToQuery res = this.repository.getEduCost(request.getYear(),request.getState(),request.getType(), request.getLength()
+                , request.getExpense());
+        responseObserver.onNext(res);
         responseObserver.onCompleted();
+
+        Document doc = new org.bson.Document("Cost",res.getCost());
+
+        this.repository.createAndSaveDataToNewCollection("EduCostStatQueryOne",doc);
         super.queryCost(request, responseObserver);
     }
 
     @Override
     public void queryExpensiveStateList(ExpensiveStateQuery request, StreamObserver<org.rpcproject.compiled_protobuf_classes.ExpensiveStateResponse> responseObserver) {
-        responseObserver.onNext(this.repository.getExpensiveStatList(request.getYear(), request.getType(), request.getLength()));
+        org.rpcproject.compiled_protobuf_classes.ExpensiveStateResponse res = this.repository.getExpensiveStatList(request.getYear(), request.getType(), request.getLength());
+        responseObserver.onNext(res);
         responseObserver.onCompleted();
+
+        Document doc = new Document("States",res.getStatesList());
+        this.repository.createAndSaveDataToNewCollection("EduCostStatQueryTwo",doc);
         super.queryExpensiveStateList(request, responseObserver);
     }
 
@@ -52,6 +64,17 @@ public class EduCostService extends org.rpcproject.compiled_protobuf_classes.Edu
 //            idx++;
 //        }
 
+        List<org.rpcproject.compiled_protobuf_classes.EconomicStateResponse> list= responseList.build().getEconomicStatResponseListList();
+        for (org.rpcproject.compiled_protobuf_classes.EconomicStateResponse item : list) {
+            Document doc = new Document();
+            doc.append("Year",item.getYear());
+            doc.append("Length",item.getLength());
+            doc.append("Type",item.getType());
+            doc.append("Expense",item.getExpense());
+
+            this.repository.createAndSaveDataToNewCollection("EduCostStatQueryThree",doc);
+
+        }
         responseObserver.onNext(responseList.build());
         responseObserver.onCompleted();
 
@@ -82,11 +105,24 @@ public class EduCostService extends org.rpcproject.compiled_protobuf_classes.Edu
         responseObserver.onNext(responseList1.build());
         responseObserver.onCompleted();
 
+        Iterator itter = responseList1.build().getHighestGrowthRateResponseListList().iterator();
+
+        while(itter.hasNext()) {
+            org.rpcproject.compiled_protobuf_classes.HighestGrowthRateResponse itm = (org.rpcproject.compiled_protobuf_classes.HighestGrowthRateResponse) itter.next();
+            Document doc = new Document();
+            doc.append("Stat",itm.getState());
+            this.repository.createAndSaveDataToNewCollection("EduCostStatQueryFour",doc);
+        }
+
         super.queryHighestGrowthRateList(request, responseObserver);
     }
 
     @Override
     public void queryAggragateRegionsOverallExpense(org.rpcproject.compiled_protobuf_classes.AggragateRegionsOverallExpenseQuery request, StreamObserver<org.rpcproject.compiled_protobuf_classes.AggragateRegionsOverallExpenseResponse> responseObserver) {
+        Document doc = new Document();
+        doc.append("Expense",this.repository.queryRegionsAverageExpense(request.getType(), request.getLength(), request.getRegion(), request.getYear()));
+        this.repository.createAndSaveDataToNewCollection("EduCostStatQueryFive",doc);
+
         responseObserver.onNext(this.repository.queryRegionsAverageExpense(request.getType(), request.getLength(), request.getRegion(), request.getYear()));
         responseObserver.onCompleted();
         super.queryAggragateRegionsOverallExpense(request, responseObserver);

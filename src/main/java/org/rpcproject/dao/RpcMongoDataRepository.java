@@ -14,6 +14,7 @@ import org.rpcproject.utils.Environment;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * <h1>RpcMongoDataRepository</h1>
@@ -105,70 +106,74 @@ public class RpcMongoDataRepository {
             .EconomicStateResponse> queryEconomicStat(String year, String type, String length) {
         List<org.rpcproject.compiled_protobuf_classes
                 .EconomicStateResponse> economicStateResponseList = new ArrayList<>();
-        List<Document> pipeline = new ArrayList<>();
-        pipeline.add(new Document("$match", Filters
-                .and(Filters.eq("Year", year), Filters
-                        .eq("Type", type), Filters.eq("Length", length))));
-        pipeline.add(new Document("$group", new Document("_id", "$Stat")
-                .append("Expense", new Document("$sum", "$Value"))));
-        pipeline.add(new Document("$sort", Sorts.ascending("Expense")));
-        pipeline.add(new Document("$limit", 5));
 
-        MongoCursor<Document> cursor = this.mongoCollection.aggregate(pipeline).iterator();
 
+        Document filter = new Document();
+        filter.append("Year",year);
+        filter.append("Type",type);
+        filter.append("Length", length);
+        Iterator cursor = this.mongoCollection.find(filter).limit(5).iterator();
+
+        Integer expense = 0;
         while(cursor.hasNext()) {
-            Document doc = cursor.next();
-
-            String state = doc.getString("_id");
-            int expense = doc.getInteger("Expense");
+            Document doc = (Document) cursor.next();
+            expense += Integer.parseInt(doc.getString("Value"));
 
             org.rpcproject.compiled_protobuf_classes.EconomicStateResponse economicStateResponse = org.rpcproject.compiled_protobuf_classes.EconomicStateResponse
                     .newBuilder()
-                    .setExpense(String.valueOf(expense))
                     .setLength(length)
                     .setType(type)
                     .setYear(year)
+                    .setExpense(String.valueOf(expense))
                     .build();
             economicStateResponseList.add(economicStateResponse);
-
         }
+
 
         return economicStateResponseList;
     }
+
 
     public List<org.rpcproject.compiled_protobuf_classes
             .HighestGrowthRateResponse> queryHighestGrowthRateList(String[] yearsStr, String type, String length) {
         List<org.rpcproject.compiled_protobuf_classes
                 .HighestGrowthRateResponse> highestGrowthRateResponseArrayList = new ArrayList<>();
-        List<Document> pipeline = new ArrayList<>();
-        pipeline.add(new Document("$match", Filters
-                .and(Filters.in("Year", yearsStr), Filters
-                        .eq("Type", type), Filters
-                        .eq("Length", length))));
-        pipeline.add(new Document("$group", new Document("_id", new Document("State", "$Stat")
-                .append("Year", "$Year")).append("Expense", new Document("$sum", "$Value"))));
-        pipeline.add(new Document("$sort", Sorts.ascending("_id.State", "_id.Year")));
-        pipeline.add(new Document("$group", new Document("_id", "$_id.State")
-                .append("Expense", new Document("$push", "$Expense"))));
-        pipeline.add(new Document("$project", new Document("_id", 1)
-                .append("GrowthRates", new Document("$map", new Document("input", "$Expense").append("as", "expense")
-                        .append("in", new Document("$divide", Arrays.asList(new Document("$subtract", Arrays
-                                .asList("$expense", new Document("$arrayElemAt", Arrays.asList("$Expense", -1)))),
-                                new Document("$arrayElemAt", Arrays.asList("$Expense", -1)))))))));
-        pipeline.add(new Document("$unwind", "$GrowthRates"));
-        pipeline.add(new Document("$group", new Document("_id", "$_id").append("AverageGrowthRate",
-                new Document("$avg", "$GrowthRates"))));
-        pipeline.add(new Document("$sort", Sorts.descending("AverageGrowthRate")));
-        pipeline.add(new Document("$limit", 5));
 
-        MongoCursor<Document> cursor = this.mongoCollection.aggregate(pipeline).iterator();
+        List<Document> docs = (List<Document>) this.mongoCollection.find(
+                Filters.and(
+                        Filters.in("Year", yearsStr),
+                        Filters.eq("Type", type),
+                        Filters.eq("Length", length)
+                )
+        ).into(new ArrayList<>());
 
+        Map<String, List<Integer>> expensesByState = new HashMap<>();
+        for (Document doc : docs) {
+            String state = doc.getString("Stat");
+            int year = Integer.parseInt(doc.getString("Year"));
+            int expense = Integer.parseInt(doc.getString("Value"));
+            if (!expensesByState.containsKey(state)) {
+                expensesByState.put(state, new ArrayList<>());
+            }
+            expensesByState.get(state).add(expense);
+        }
 
+        Map<String, Double> growthRatesByState = new HashMap<>();
+        for (String state : expensesByState.keySet()) {
+            List<Integer> expenses = expensesByState.get(state);
+            int baseYearExpense = expenses.get(expenses.size() - 1);
+            double growthRate = (expenses.get(0) - baseYearExpense) / (double) baseYearExpense;
+            growthRatesByState.put(state, growthRate);
+        }
 
-        while (cursor.hasNext()) {
-            Document doc = cursor.next();
-            String state = doc.getString("_id");
-            double averageGrowthRate = doc.getDouble("AverageGrowthRate");
+        List<Map.Entry<String, Double>> sortedGrowthRates = growthRatesByState.entrySet().stream()
+                .sorted(Collections.reverseOrder(Map.Entry.comparingByValue()))
+                .limit(5)
+                .collect(Collectors.toList());
+
+        for (Map.Entry<String, Double> entry : sortedGrowthRates) {
+            String state = entry.getKey();
+            double averageGrowthRate = entry.getValue();
             org.rpcproject.compiled_protobuf_classes
                     .HighestGrowthRateResponse highestGrowthRateResponse = org.rpcproject.compiled_protobuf_classes
                     .HighestGrowthRateResponse
@@ -176,10 +181,12 @@ public class RpcMongoDataRepository {
                     .setState(state)
                     .setExpense(String.valueOf(averageGrowthRate))
                     .build();
+            highestGrowthRateResponseArrayList.add(highestGrowthRateResponse);
         }
 
         return highestGrowthRateResponseArrayList;
     }
+
 
     public org.rpcproject.compiled_protobuf_classes
             .AggragateRegionsOverallExpenseResponse queryRegionsAverageExpense(String type,
@@ -212,7 +219,7 @@ public class RpcMongoDataRepository {
         return respone;
     }
 
-    public boolean createAndSaveDataToNewCollection(String collectionName, Document collectionData,Document uniqueDoc) {
+    public boolean createAndSaveDataToNewCollection(String collectionName, Document collectionData) {
         try {
             // if not exist
             this.mongoDatabase.createCollection(collectionName);
@@ -220,9 +227,9 @@ public class RpcMongoDataRepository {
 
         }
         MongoCollection collection = this.mongoDatabase.getCollection(collectionName);
-        if (collection.find(uniqueDoc).first() == null) {
-            collection.insertOne(collectionData);
-        }
+
+        collection.insertOne(collectionData);
+
 
         return false;
     }
