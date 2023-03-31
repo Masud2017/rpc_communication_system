@@ -263,10 +263,10 @@ public class RpcMongoDataRepository {
 
     public static void main (String[] args) throws IOException {
         RpcMongoDataRepository repository = new RpcMongoDataRepository("rpc_communication","EduCostStat");
-//        org.rpcproject.compiled_protobuf_classes
-//                .AggragateRegionsOverallExpenseResponse response = repository
-//                .queryRegionsAverageExpense("Public In-State","4-year","South","2013");
-//        System.out.println(response.getYear() + "  "+response.getOverallExpense());
+        org.rpcproject.compiled_protobuf_classes
+                .AggragateRegionsOverallExpenseResponse response = repository
+                .queryRegionsAverageExpense("Public In-State","4-year","South","2013");
+        System.out.println(response.getYear() + "  "+response.getOverallExpense());
 //
 //
 //

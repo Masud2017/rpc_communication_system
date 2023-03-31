@@ -121,7 +121,7 @@ public class EduCostService extends org.rpcproject.compiled_protobuf_classes.Edu
     public void queryAggragateRegionsOverallExpense(org.rpcproject.compiled_protobuf_classes.AggragateRegionsOverallExpenseQuery request, StreamObserver<org.rpcproject.compiled_protobuf_classes.AggragateRegionsOverallExpenseResponse> responseObserver) {
         Document doc = new Document();
         doc.append("Expense",this.repository.queryRegionsAverageExpense(request.getType(), request.getLength(), request.getRegion(), request.getYear()));
-        this.repository.createAndSaveDataToNewCollection("EduCostStatQueryFive",doc);
+//        this.repository.createAndSaveDataToNewCollection("EduCostStatQueryFive",doc);
 
         responseObserver.onNext(this.repository.queryRegionsAverageExpense(request.getType(), request.getLength(), request.getRegion(), request.getYear()));
         responseObserver.onCompleted();
