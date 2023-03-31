@@ -71,8 +71,8 @@ public class MongoDBDataImporter {
         return true;
     }
 
-    public static void main(String[] args) throws IOException {
-        MongoDBDataImporter importer = new MongoDBDataImporter();
-        importer.startImporting();
-    }
+//    public static void main(String[] args) throws IOException {
+//        MongoDBDataImporter importer = new MongoDBDataImporter();
+//        importer.startImporting();
+//    }
 }
