@@ -13,10 +13,10 @@ import java.io.IOException;
 public class App 
 {
     public static void main( String[] args ) throws IOException, InterruptedException {
-//        Server server = new Server();
-//        server.startServer(4444);
+        Server server = new Server();
+        server.startServer(4444);
 
-        MongoDBDataImporter importer = new MongoDBDataImporter();
-        importer.startImporting();
+//        MongoDBDataImporter importer = new MongoDBDataImporter();
+//        importer.startImporting();
     }
 }
